@@ -7,19 +7,21 @@ test(`
 
 
 
-`,
--1,
--1,
-)
+`, (
+  -1
+), (
+  -1
+))
 
 test(`
 
 
 
-`,
--1,
--1,
-)
+`, (
+  -1
+), (
+  -1
+))
 
 solution(async input => {
   let lines = input.split("\n")
