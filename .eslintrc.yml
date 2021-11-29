@@ -136,9 +136,9 @@ rules:
     - ignoreChainWithDepth: 4
   no-lonely-if:
     - warn
-  no-multiple-empty-lines:
-    - warn
-    - max: 1
+  # no-multiple-empty-lines:
+  #   - warn
+  #   - max: 1
   no-trailing-spaces:
     - warn
   no-unneeded-ternary:
@@ -217,12 +217,12 @@ rules:
   arrow-parens:
     - warn
     - as-needed
-  max-len:
-    - warn
-    - code: 120
-      tabWidth: 1
-      ignoreUrls: true
-      ignoreRegExpLiterals: true
+  # max-len:
+  #   - warn
+  #   - code: 120
+  #     tabWidth: 1
+  #     ignoreUrls: true
+  #     ignoreRegExpLiterals: true
   no-var:
     - warn
   no-console:
@@ -232,4 +232,14 @@ rules:
   no-empty-pattern:
     - off
   no-constant-condition:
+    - off
+  'max-len':
+    - off
+  'no-multiple-empty-lines':
+    - off
+  '@typescript-eslint/no-non-null-assertion':
+    - off
+  'no-unused-vars':
+    - off
+  '@typescript-eslint/no-unused-vars':
     - off
