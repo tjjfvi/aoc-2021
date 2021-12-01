@@ -1,5 +1,6 @@
 
 import { aoc, solution, test, dbg } from "../host/lib"
+import { add, mult, raceGens, allGens, repeatTillConst } from "./helpers"
 
 aoc(1234, 5, 1)
 
