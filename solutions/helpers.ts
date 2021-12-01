@@ -39,3 +39,28 @@ export const repeatTillConst = <T>(x: T, f: (x: T) => T): T => {
   }
   return cur
 }
+
+let dbgMode = true
+
+const _dbg = <T>(x: T, ...y: unknown[]): T => {
+  if(dbgMode)
+    console.log(x, ...y)
+  return x
+}
+
+_dbg.x = <T>(x: T, ..._: unknown[]) => x
+
+Object.defineProperties(_dbg, {
+  true: {
+    get: () => {
+      dbgMode = true
+    },
+  },
+  false: {
+    get: () => {
+      dbgMode = false
+    },
+  },
+})
+
+export const dbg = _dbg as typeof _dbg & Record<"true" | "false", undefined>

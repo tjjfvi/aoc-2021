@@ -1,5 +1,5 @@
 
-import { aoc, solution, test, dbg } from "../host/lib"
+import { aoc, solution, test } from "../host/lib"
 
 aoc(2020, 5, 1)
 

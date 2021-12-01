@@ -13,7 +13,6 @@ puzzleDrop.catch(() => {})
 let input: Promise<string>
 let solutionFn: (input: string) => Promise<number | undefined>
 let tests: [string, number?, number?][] = []
-let dbgMode = true
 
 export async function aoc(_year: number, _day: number, _part: 1 | 2){
   if(year) throw new Error("aoc already called")
@@ -54,29 +53,6 @@ export function test(input: string, output1?: number, output2?: number){
 export function solution(cb: typeof solutionFn){
   solutionFn = cb
 }
-
-const _dbg = <T>(x: T, ...y: unknown[]): T => {
-  if(dbgMode)
-    console.log(x, ...y)
-  return x
-}
-
-_dbg.x = <T>(x: T, ..._: unknown[]) => x
-
-Object.defineProperties(_dbg, {
-  true: {
-    get: () => {
-      dbgMode = true
-    },
-  },
-  false: {
-    get: () => {
-      dbgMode = false
-    },
-  },
-})
-
-export const dbg = _dbg as typeof _dbg & Record<"true" | "false", undefined>
 
 function clear(){
   process.stdout.write("\u001b[3J\u001b[1J")
