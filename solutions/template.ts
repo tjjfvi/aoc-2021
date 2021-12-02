@@ -8,21 +8,27 @@ test(`
 
 
 
-`, (
+`,
+true ? (
   -1
-), (
+) : undefined,
+true ? (
   -1
-))
+) : undefined,
+)
 
 test(`
 
 
 
-`, (
+`,
+true ? (
   -1
-), (
+) : undefined,
+true ? (
   -1
-))
+) : undefined,
+)
 
 solution(async input => {
   let lines = input.split("\n")
