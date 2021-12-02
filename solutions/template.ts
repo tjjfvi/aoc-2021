@@ -27,6 +27,7 @@ test(`
 solution(async input => {
   let lines = input.split("\n")
   let paragraphs = input.split("\n\n")
+  let nums = lines.map(x => +x)
 
   return 0
 })
