@@ -1,6 +1,6 @@
 
 import { aoc, solution, test } from "../host/lib"
-import { add, mult, raceGens, allGens, repeatTillConst, dbg } from "./helpers"
+import { add, mult, raceGens, allGens, repeatTillConst, dbg, arr, asc, dsc, groupBy } from "./helpers"
 
 aoc(1234, 5, 1)
 

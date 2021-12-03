@@ -1,4 +1,29 @@
 
+export function arr(length: number): number[]
+export function arr<T>(length: number, fn: (index: number) => T): T[]
+export function arr(length: number, fn: (index: number) => unknown = i => i): unknown[]{
+  return [...Array(length)].map((_, i) => fn(i))
+}
+
+export function asc<T>(map: (x: T) => number): (x: T, y: T) => number{
+  return (a, b) => map(a) - map(b)
+}
+
+export function dsc<T>(map: (x: T) => number): (x: T, y: T) => number{
+  return (a, b) => map(b) - map(a)
+}
+
+export function groupBy<T, G>(arr: T[], group: (val: T, index: number, arr: T[]) => G){
+  let map = new Map<G, T[]>()
+  for(const [i, val] of arr.entries()) {
+    let g = group(val, i, arr)
+    let grp = map.get(g) ?? []
+    map.set(g, grp)
+    grp.push(val)
+  }
+  return [...map.entries()]
+}
+
 export function add(a: number, b: number){
   return a + b
 }
@@ -64,3 +89,13 @@ Object.defineProperties(_dbg, {
 })
 
 export const dbg = _dbg as typeof _dbg & Record<"true" | "false", undefined>
+
+Object.prototype._ = function(fn){
+  return fn(this)
+}
+
+declare global {
+  interface Object {
+    _<T, U>(this: T, fn: (val: T) => U): U,
+  }
+}
