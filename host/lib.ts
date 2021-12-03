@@ -31,7 +31,9 @@ export async function aoc(_year: number, _day: number, _part: 1 | 2){
 async function getPuzzleInput(){
   if(input) return await input
   try {
-    return await fs.readFile(`data/${year}/${day}/input`, "utf8")
+    let x = await fs.readFile(`data/${year}/${day}/input`, "utf8")
+    if(!x) throw null
+    return x
   }
   catch (e) {
     let mkdirProm = fs.mkdir(`data/${year}/${day}`, { recursive: true })

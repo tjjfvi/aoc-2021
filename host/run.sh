@@ -25,6 +25,9 @@ if [[ ! -f $FILE ]]; then
   sed -e 's/^aoc(.*)$/aoc('$YEAR', '$DAYN', '$PART')/' < $SOURCE > $FILE
 fi
 
+mkdir -p data/$YEAR/$DAYN
+touch data/$YEAR/$DAYN/input
+code data/$YEAR/$DAYN/input
 code $FILE
 touch tsconfig.json
 ts-node-dev --respawn $FILE
