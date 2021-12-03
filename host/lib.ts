@@ -4,6 +4,7 @@ dotenv.config()
 
 import fs from "fs/promises"
 import fetch from "node-fetch"
+import clipboard from "clipboardy"
 
 let year: number
 let day: number
@@ -11,7 +12,7 @@ let part: 1 | 2
 let puzzleDrop: Promise<void> = Promise.reject()
 puzzleDrop.catch(() => {})
 let input: Promise<string>
-let solutionFn: (input: string) => Promise<number | undefined>
+let solutionFn: (input: string) => Promise<number>
 let tests: [string, number?, number?][] = []
 
 export async function aoc(_year: number, _day: number, _part: 1 | 2){
@@ -91,6 +92,7 @@ setTimeout(async () => {
     return
   }
   console.log(`\n${testN} test(s) passed (${tests.length - testN} skipped).\nOutput: ${output}`)
+  clipboard.writeSync(output.toString())
 }, 0)
 
 clear()
