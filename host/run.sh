@@ -26,4 +26,5 @@ if [[ ! -f $FILE ]]; then
 fi
 
 code $FILE
+touch tsconfig.json
 ts-node-dev --respawn $FILE
