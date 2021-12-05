@@ -103,3 +103,7 @@ declare global {
     _<T, U>(this: T, fn: (val: T) => U): U
   }
 }
+
+export function _<T>(x: () => T): T {
+  return x()
+}
