@@ -1,9 +1,9 @@
-
 import { aoc, solution, test } from "../host/lib"
 
 aoc(2020, 3, 1)
 
-test(`
+test(
+  `
 
 
 ..##.......
@@ -20,17 +20,18 @@ test(`
 
 
 `,
-7,
--1,
+  7,
+  -1,
 )
 
-test(`
+test(
+  `
 
 
 
 `,
--1,
--1,
+  -1,
+  -1,
 )
 
 solution(async input => {

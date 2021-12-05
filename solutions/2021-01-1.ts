@@ -1,10 +1,10 @@
-
 import { aoc, solution, test } from "../host/lib"
 import { add, mult, raceGens, allGens, repeatTillConst, dbg } from "./helpers"
 
 aoc(2021, 1, 1)
 
-test(`
+test(
+  `
 
 199
 200
@@ -18,21 +18,20 @@ test(`
 263
 
 
-`, (
-  7
-), (
-  -1
-))
+`,
+  7,
+  -1,
+)
 
-test(`
+test(
+  `
 
 
 
-`, (
-  -1
-), (
-  -1
-))
+`,
+  -1,
+  -1,
+)
 
 solution(async input => {
   let lines = input.split("\n")

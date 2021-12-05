@@ -9,16 +9,16 @@
 // @grant        none
 // ==/UserScript==
 
-(function(){
+;(function () {
   "use strict"
 
   // Click codeblock to copy
-  for(const pre of document.querySelectorAll("pre, code")) {
+  for (const pre of document.querySelectorAll("pre, code")) {
     pre.style.transition = "color .1s"
     pre.addEventListener("click", async () => {
       await navigator.clipboard.writeText(pre.textContent)
       pre.style.color = "#009900"
-      setTimeout(() => pre.style.color = "", 100)
+      setTimeout(() => (pre.style.color = ""), 100)
     })
     pre.style.cursor = "pointer"
   }
@@ -27,12 +27,13 @@
   let answer = document.querySelector("input[type='text']")
   let submit = document.querySelector("input[type='submit']")
   submit.addEventListener("click", async e => {
-    if(answer.value) return
+    if (answer.value) return
     e.preventDefault()
-    let value = await (await (await navigator.clipboard.read())[0].getType("text/plain")).text()
+    let value = await (
+      await (await navigator.clipboard.read())[0].getType("text/plain")
+    ).text()
     console.log(value)
     answer.value = value
     submit.click()
   })
-
 })()

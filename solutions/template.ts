@@ -1,9 +1,20 @@
-
 import { aoc, solution, test } from "../host/lib"
-import { add, mult, raceGens, allGens, repeatTillConst, dbg, arr, asc, dsc, groupBy } from "./helpers"
+import {
+  add,
+  mult,
+  raceGens,
+  allGens,
+  repeatTillConst,
+  dbg,
+  arr,
+  asc,
+  dsc,
+  groupBy,
+} from "./helpers"
 
 aoc(1234, 5, 1)
 
+// prettier-ignore
 test(`
 
 
@@ -17,6 +28,7 @@ true ? (
 ) : undefined,
 )
 
+// prettier-ignore
 test(`
 
 
