@@ -210,3 +210,10 @@ String.prototype.parseInt = function (this: string, base = 10) {
 String.prototype.toNum = function (this: string) {
   return +this
 }
+
+declare global {
+  interface Array<T> {
+    /** @deprecated */
+    unshift(): number
+  }
+}
