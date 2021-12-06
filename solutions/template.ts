@@ -10,6 +10,7 @@ import {
   asc,
   dsc,
   groupBy,
+  toNum,
   _,
 } from "./helpers"
 
@@ -44,9 +45,7 @@ true ? (
 )
 
 solution(async input => {
-  let lines = input.split("\n")
-  let paragraphs = input.split("\n\n")
-  let nums = lines.map(x => +x)
+  dbg.x(input)
 
   return 0
 })

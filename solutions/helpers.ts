@@ -107,3 +107,106 @@ declare global {
 export function _<T>(x: () => T): T {
   return x()
 }
+
+export function toNum(x: string): number {
+  return +x
+}
+
+type SplitM<T extends unknown[], U = string> = T extends [unknown, ...infer T]
+  ? SplitM<T, U>[]
+  : T extends []
+  ? U
+  : U | SplitM<T, U>[]
+
+type UnsplitM<T extends unknown[], U extends SplitM<T, unknown>> = T extends [
+  unknown,
+  ...infer T
+]
+  ? SplitM<T, U extends (infer X)[] ? X : unknown>
+  : T extends []
+  ? U
+  : unknown
+
+declare global {
+  interface String {
+    splitm<T extends (string | RegExp)[] | []>(...splits: T): SplitM<T>
+    splitm<T extends (string | RegExp)[] | [], U>(
+      ...splits: [...splits: T, fn: (value: string) => U]
+    ): SplitM<T, U>
+  }
+  interface Array<T> {
+    joinm<T extends (string | RegExp)[] | []>(
+      this: SplitM<T, string | number>,
+      ...joins: T
+    ): string[]
+    joinm<T extends string[] | [], U extends SplitM<T, unknown>>(
+      this: U,
+      fn: (value: UnsplitM<T, U>) => string,
+      ...joins: T
+    ): string[]
+  }
+}
+
+String.prototype.splitm = function (this: any, ...args: any[]) {
+  if (args.length === 0) return this
+  if (args.length === 1 && typeof args[0] === "function") return args[0](this)
+  return this.split(args[0]).map((x: any) => x.splitm(...args.slice(1)))
+}
+
+Array.prototype.joinm = function (this: any, ...args: any[]) {
+  if (args.length === 0) return this
+  if (args.length === 1 && typeof args[0] === "function") return args[0](this)
+  return this.map((x: any) => x.joinm(...args.slice(0, -1))).join(
+    args[args.length - 1],
+  )
+}
+
+declare global {
+  interface Array<T> {
+    last(): T
+    lastw(): { v: T }
+    ind(n: number): T
+    indw(n: number): { v: T }
+  }
+}
+
+Array.prototype.last = function () {
+  return this.ind(-1)
+}
+
+Array.prototype.lastw = function () {
+  return this.indw(-1)
+}
+
+Array.prototype.ind = function (n) {
+  n = ((n % this.length) + this.length) % this.length
+  return this[n]
+}
+
+Array.prototype.indw = function (n) {
+  n = ((n % this.length) + this.length) % this.length
+  let arr = this
+  return {
+    get v() {
+      return arr[n]
+    },
+    set v(val) {
+      arr[n] = val
+    },
+  }
+}
+
+declare global {
+  interface String {
+    parseInt(base?: number): number
+    toNum(): number
+  }
+}
+
+String.prototype.parseInt = function (this: string, base = 10) {
+  return parseInt(this, base)
+}
+
+String.prototype.toNum = function (this: string) {
+  return +this
+}
