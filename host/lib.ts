@@ -68,6 +68,7 @@ setTimeout(async () => {
     if (test[part] === undefined) continue
     testN++
     clear()
+    console.log(` --- Test ${i} ---\n`)
     let output
     try {
       output = await solutionFn(test[0])
@@ -83,6 +84,7 @@ setTimeout(async () => {
     }
   }
   clear()
+  console.log(` --- Real Input ---\n`)
   let output
   try {
     output = await solutionFn(await input)
