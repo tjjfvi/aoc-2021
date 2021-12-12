@@ -9,31 +9,31 @@
 // @grant        none
 // ==/UserScript==
 
-;(function () {
-  "use strict"
+(function () {
+  'use strict';
 
   // Click codeblock to copy
   for (const pre of document.querySelectorAll("pre, code")) {
     pre.style.transition = "color .1s"
-    pre.addEventListener("click", async () => {
+    pre.addEventListener("auxclick", async e => {
+      e.preventDefault()
       await navigator.clipboard.writeText(pre.textContent)
       pre.style.color = "#009900"
-      setTimeout(() => (pre.style.color = ""), 100)
+      setTimeout(() => pre.style.color = "", 100)
     })
-    pre.style.cursor = "pointer"
+    //pre.style.cursor = "pointer"
   }
 
   // Paste into answer box on submit
-  let answer = document.querySelector("input[type='text']")
-  let submit = document.querySelector("input[type='submit']")
+  let answer = document.querySelector("input[type='text']");
+  let submit = document.querySelector("input[type='submit']");
   submit.addEventListener("click", async e => {
     if (answer.value) return
-    e.preventDefault()
-    let value = await (
-      await (await navigator.clipboard.read())[0].getType("text/plain")
-    ).text()
+    e.preventDefault();
+    let value = await (await (await navigator.clipboard.read())[0].getType("text/plain")).text();
     console.log(value)
-    answer.value = value
-    submit.click()
-  })
-})()
+    answer.value = value;
+    submit.click();
+  });
+
+})();
