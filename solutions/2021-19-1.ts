@@ -329,12 +329,12 @@ solution(async input => {
       for (let [oi, o] of orientations.entries())
         for (let barAnchor of bar) {
           let fooTrans = foo.map(x => sub(x, fooAnchor))
-          let barTrans = bar.map(x => o(sub(x, barAnchor)))
+          let barTrans = bar.map(x => sub(o(x), o(barAnchor)))
           let b = new Set(barTrans.map(x => x + ""))
           let shared = fooTrans.filter(x => b.has(x + "")).length
           // console.log(shared, [fooTrans, barTrans])
           if (shared >= 12) {
-            console.log(sub(fooAnchor, barAnchor))
+            console.log(sub(fooAnchor, o(barAnchor)))
             return [
               [
                 ...new Set(
