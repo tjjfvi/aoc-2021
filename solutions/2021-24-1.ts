@@ -1,4 +1,5 @@
-import { isBuffer } from "util"
+import { from } from "form-data"
+import { inspect, isBuffer } from "util"
 import { aoc, solution, test } from "../host/lib"
 import {
   add,
@@ -56,154 +57,159 @@ true ? (
 solution(async input => {
   dbg.x(input)
 
-  let variables: Record<string, string | number> = { x: 0, y: 0, z: 0, w: 0 }
-  let calcs: Record<string, string> = {}
-  let calsPoss: Record<string, number[]> = {}
+  type Comp = {
+    id: number
+    inpDeps: number[]
+    deps: number[]
+    get: (inps: number[], vals: number[]) => number
+    poss?: Record<number, [number[], number[]][] | undefined>
+  }
 
-  let i = 0
-  let c = 0
+  let variables: Record<string, number> = { x: 0, y: 0, z: 0, w: 0 }
+  let comps: Comp[] = [
+    {
+      id: 0,
+      inpDeps: [],
+      deps: [],
+      get: () => 0,
+    },
+  ]
+
+  let inputId = 0
+  let compId = 1
 
   for (let line of input.split("\n")) {
     console.log(variables)
     let op = line.split(" ")[0]
     let [aVar, bVar] = line.split(" ").slice(1)
-    let aVal = isNaN(+aVar) ? variables[aVar] : +aVar
-    let bVal = isNaN(+bVar) ? variables[bVar] : +bVar
+    let aVal = isNaN(+aVar) ? comps[variables[aVar]] : +aVar
+    let bVal = isNaN(+bVar) ? comps[variables[bVar]] : +bVar
     let isConst = typeof aVal === "number" && typeof bVal === "number"
-    let result: string | number = 0
-    if (op === "inp") result = "o.i" + i++
-    else if (op === "add")
-      if (isConst) result = +aVal + +bVal
-      else if (!aVal) result = bVal
-      else if (!bVal) result = aVal
-      else result = `(${aVal} + ${bVal})`
-    else if (op === "mul")
-      if (isConst) result = +aVal * +bVal
-      else if (!aVal || !bVal) result = 0
-      else if (aVal === 1) result = bVal
-      else if (bVal === 1) result = aVal
-      else result = `(${aVal} * ${bVal})`
-    else if (op === "div")
-      if (isConst) result = trunc(+aVal / +bVal)
-      else if (bVal === 1) result = aVal
-      else result = `trunc(${aVal} / ${bVal})`
-    else if (op === "mod")
-      if (isConst) result = +aVal % +bVal
-      else if (
-        ((calcs["c" + c] = `(${aVal} % ${bVal})`),
-        smartEqual("o.c" + c++, aVal) === 1)
-      )
-        console.log((result = aVal))
-      else result = `(${aVal} % ${bVal})`
-    else if (op === "eql")
-      if (isConst) result = +aVal === +bVal ? 1 : 0
-      else result = smartEqual(aVal, bVal)
-    if (typeof result === "string" && !result.startsWith("o.")) {
-      let cn = "c" + c++
-      calcs[cn] = result
-      result = "o." + cn
+    let result: Comp
+    if (op === "inp") {
+      let i = inputId++
+      result = {
+        id: compId++,
+        inpDeps: [i],
+        deps: [],
+        get: is => is[i],
+      }
+    } else if ((op === "mul" && aVal === 0) || bVal === 0) result = comps[0]
+    else {
+      let fn: (a: number, b: number) => number
+      if (op === "add") fn = (a, b) => a + b
+      if (op === "mul") fn = (a, b) => a * b
+      if (op === "mod") fn = (a, b) => a % b
+      if (op === "div") fn = (a, b) => trunc(a / b)
+      if (op === "eql") fn = (a, b) => +(a === b)
+      result = {
+        id: compId++,
+        inpDeps: [],
+        deps: [
+          ...new Set([
+            ...(typeof aVal === "number" ? [] : [aVal.id]),
+            ...(typeof bVal === "number" ? [] : [bVal.id]),
+          ]),
+        ],
+        get: (_, d) =>
+          fn(
+            typeof aVal === "number" ? aVal : d[aVal.id],
+            typeof bVal === "number" ? bVal : d[bVal.id],
+          ),
+      }
     }
-    variables[aVar] = result
+    comps[result.id] = result
+    variables[aVar] = result.id
   }
-  function smartEqual(a: string | number, b: string | number) {
-    let ap = poss(a)
-    let bp = poss(b)
-    if (ap + "" === bp + "") return 1
-    if (ap.every(x => !bp.includes(x))) return 0
-    return `(${a} === ${b} ? 1 : 0)`
-  }
-  function poss(x: string | number) {
-    // console.log(x)
-    if (typeof x === "number") return [x]
-    x = x.slice(2)
-    if (calsPoss[x]) return calsPoss[x]
-    if (x.startsWith("i")) return [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    // console.log(x, calcs[x])
-    let variables = [...new Set(calcs[x].match(/[ic]\d+/g)! ?? [])]
-    let p = new Set<number>()
-    let o = {} as any
-    function bar(i: number) {
-      if (i === variables.length) {
-        p.add(eval(calcs[x]))
+
+  function genPoss(comp: Comp, V?: number) {
+    if (comp.poss && (V === undefined || comp.poss[V])) return comp.poss!
+    // console.log(comp.id)
+    let depsPoss = comp.deps.map(x => genPoss(comps[x]))
+    let inputs: number[] = []
+    let cvs: number[] = []
+    let deepPoss = comp.poss ?? []
+    function inputRecursion(i: number) {
+      if (i === comp.inpDeps.length) {
+        compRecursion(0)
         return
       }
-      for (let v of poss("o." + variables[i])) {
-        o[variables[i]] = v
-        bar(i + 1)
+      for (let v = 1; v < 10; v++) {
+        inputs[comp.inpDeps[i]] = v
+        inputRecursion(i + 1)
       }
     }
-    bar(0)
-    return (calsPoss[x] = [...p].sort())
-  }
-  function trunc(a: number) {
-    if (a > 0) return Math.floor(a)
-    else return Math.ceil(a)
-  }
-
-  let solveMemo: Record<string, any> = {}
-  function solve(x: string, v: number): [string, number][][] {
-    let key = x + "=" + v
-    if (solveMemo[key]) return solveMemo[key]
-    // console.log(x)
-    if (x.startsWith("i"))
-      if (v > 0 && v < 10) return [[[x, v]]]
-      else return []
-    console.log(x, v)
-    let variables = [...new Set(calcs[x].match(/[ic]\d+/g)! ?? [])]
-    let p = new Set<number>()
-    let o = {} as any
-    let solves: [string, number][][] = []
-    function bar(i: number) {
-      if (i === variables.length) {
-        let val = eval(calcs[x])
-        if (val === v) solves.push(variables.map(x => [x, o[x]]))
+    function compRecursion(i: number) {
+      if (i === comp.deps.length) {
+        let v = comp.get(inputs, cvs)
+        if (v === V) (deepPoss[v] ??= []).push([inputs.slice(), cvs.slice()])
+        else deepPoss[v] ??= undefined
         return
       }
-      for (let v of poss("o." + variables[i])) {
-        o[variables[i]] = v
-        bar(i + 1)
+      for (let v in depsPoss[i]) {
+        if (isNaN(+v)) continue
+        cvs[comp.deps[i]] = +v
+        compRecursion(i + 1)
       }
     }
-    bar(0)
-    solveMemo[key] = solves
-    return solves
+    inputRecursion(0)
+    // console.log(inspect(deepPoss, undefined, Infinity), comp)
+    return (comp.poss = deepPoss)
   }
 
-  let options: [string, number][][] = []
-  function doSolve(prev: [string, number][], curs: [string, number][][]) {
-    for (let cur of curs) {
-      if (
-        cur.some(x =>
-          [...cur, ...prev].some(y => x[0] === y[0] && x[1] !== y[1]),
-        )
-      )
-        continue
-      cur = cur.filter(x => !prev.some(y => x[0] === y[0]))
-      if (!cur.length) {
-        options.push(prev)
-        console.log(options)
-        continue
-      }
-      doSolve(
-        [...prev, cur[0]],
-        solve(cur[0][0], cur[0][1]).map(x => [...x, ...cur.slice(1)]),
-      )
-    }
-  }
+  genPoss(comps[variables.z])
 
-  doSolve([], [[[`${variables.z}`.slice(2), 0]]])
+  let options: [number[], number[]][] = [[[], []]]
+  options[0][1][variables.z] = 0
 
-  let vals = options
-    .map(x =>
-      x
-        .filter(x => x[0].startsWith("i"))
-        .sort(asc(x => +x[0].slice(1)))
-        .map(x => x[1])
-        .reverse()
-        .reduce((a, b) => a * 10 + b, 0),
+  let fin: number[][] = []
+
+  let cur
+  while ((cur = options.pop())) {
+    console.log(
+      cur.length,
+      fin.length,
+      Math.max(...fin.map(x => x.slice().reduce((a, b) => a * 10 + b, 0))),
     )
-    .sort(dsc(x => x))
-  console.log(vals)
+    if (cur[1].every(x => false)) {
+      fin.push(cur[0])
+      continue
+    }
+    let y: number
+    for (let z in cur[1]) {
+      if (isNaN(+z)) continue
+      y = +z
+    }
+    let x = y!
+    let a = cur[1][x]
+    delete cur[1][x]
+    // console.log(x)
+    bar: for (let foo of dbg.x(genPoss(comps[x], a)[a]!)) {
+      let newC = cur[0].slice()
+      for (let n in foo[0]) {
+        if (isNaN(+n)) continue
+        if (foo[0][n] === newC[n]) continue
+        if (n in newC) continue bar
+        newC[n] = foo[0][n]
+      }
+      let newD = cur[1].slice()
+      for (let n in foo[1]) {
+        if (isNaN(+n)) continue
+        if (foo[1][n] === newD[n]) continue
+        if (n in newD) continue bar
+        newD[n] = foo[1][n]
+      }
+      options.push([newC, newD])
+    }
+  }
 
-  return vals[0]
+  let ns = Math.max(...fin.map(x => x.slice().reduce((a, b) => a * 10 + b, 0)))
+  console.log(ns)
+
+  return ns
 })
+
+function trunc(a: number) {
+  if (a > 0) return Math.floor(a)
+  else return Math.ceil(a)
+}
