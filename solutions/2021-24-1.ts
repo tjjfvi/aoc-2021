@@ -1,5 +1,7 @@
+import { notDeepEqual } from "assert"
 import { from } from "form-data"
 import { inspect, isBuffer } from "util"
+import { MessagePort } from "worker_threads"
 import { aoc, solution, test } from "../host/lib"
 import {
   add,
@@ -32,7 +34,7 @@ mul z y
 
 
 `,
-true ? (
+!true ? (
   92
 ) : undefined,
 true ? (
@@ -55,158 +57,303 @@ true ? (
 )
 
 solution(async input => {
-  dbg.x(input)
+  type Node =
+    | {
+        type: "const"
+        value: number
+      }
+    | {
+        type: "op"
+        op: "add" | "mul" | "div" | "mod" | "eql" | "round"
+        a: Node
+        b: Node
+      }
+    | {
+        type: "proxy"
+        inner: Node
+      }
+    | {
+        type: "input"
+        index: number
+      }
+    | {
+        type: "neq"
+        a: Node
+        b: Node
+        t: Node
+        f: Node
+      }
 
-  type Comp = {
-    id: number
-    inpDeps: number[]
-    deps: number[]
-    get: (inps: number[], vals: number[]) => number
-    poss?: Record<number, [number[], number[]][] | undefined>
-  }
+  let zero = { type: "const", value: 0 } as const
 
-  let variables: Record<string, number> = { x: 0, y: 0, z: 0, w: 0 }
-  let comps: Comp[] = [
-    {
-      id: 0,
-      inpDeps: [],
-      deps: [],
-      get: () => 0,
-    },
-  ]
+  let indexI = 0
 
-  let inputId = 0
-  let compId = 1
+  let variables: Record<string, Node> = { x: zero, y: zero, z: zero, w: zero }
 
   for (let line of input.split("\n")) {
-    console.log(variables)
     let op = line.split(" ")[0]
-    let [aVar, bVar] = line.split(" ").slice(1)
-    let aVal = isNaN(+aVar) ? comps[variables[aVar]] : +aVar
-    let bVal = isNaN(+bVar) ? comps[variables[bVar]] : +bVar
-    let isConst = typeof aVal === "number" && typeof bVal === "number"
-    let result: Comp
-    if (op === "inp") {
-      let i = inputId++
-      result = {
-        id: compId++,
-        inpDeps: [i],
-        deps: [],
-        get: is => is[i],
-      }
-    } else if ((op === "mul" && aVal === 0) || bVal === 0) result = comps[0]
-    else {
-      let fn: (a: number, b: number) => number
-      if (op === "add") fn = (a, b) => a + b
-      if (op === "mul") fn = (a, b) => a * b
-      if (op === "mod") fn = (a, b) => a % b
-      if (op === "div") fn = (a, b) => trunc(a / b)
-      if (op === "eql") fn = (a, b) => +(a === b)
-      result = {
-        id: compId++,
-        inpDeps: [],
-        deps: [
-          ...new Set([
-            ...(typeof aVal === "number" ? [] : [aVal.id]),
-            ...(typeof bVal === "number" ? [] : [bVal.id]),
-          ]),
-        ],
-        get: (_, d) =>
-          fn(
-            typeof aVal === "number" ? aVal : d[aVal.id],
-            typeof bVal === "number" ? bVal : d[bVal.id],
-          ),
-      }
-    }
-    comps[result.id] = result
-    variables[aVar] = result.id
+    let [a, b] = line
+      .split(" ")
+      .slice(1)
+      .map(x =>
+        isNaN(+x) ? variables[x] : ({ type: "const", value: +x } as const),
+      )
+    variables[line.split(" ")[1]] =
+      op === "inp"
+        ? {
+            type: "input",
+            index: indexI++,
+          }
+        : {
+            type: "op",
+            op: op as never,
+            a,
+            b,
+          }
   }
 
-  function genPoss(comp: Comp, V?: number) {
-    if (comp.poss && (V === undefined || comp.poss[V])) return comp.poss!
-    // console.log(comp.id)
-    let depsPoss = comp.deps.map(x => genPoss(comps[x]))
-    let inputs: number[] = []
-    let cvs: number[] = []
-    let deepPoss = comp.poss ?? []
-    function inputRecursion(i: number) {
-      if (i === comp.inpDeps.length) {
-        compRecursion(0)
-        return
-      }
-      for (let v = 1; v < 10; v++) {
-        inputs[comp.inpDeps[i]] = v
-        inputRecursion(i + 1)
-      }
+  function printNode(node: Node, map = new Map<Node, number>()): string {
+    while (node.type === "proxy") node = node.inner
+    if (node.type === "const") return node.value + ""
+    if (node.type === "input") return "i" + node.index
+    if (map.has(node)) return "v" + map.get(node)
+    if (node.type === "neq") {
+      let a = printNode(node.a, map)
+      let b = printNode(node.b, map)
+      let t = printNode(node.t, map)
+      let f = printNode(node.f, map)
+      let v = map.size
+      map.set(node, v)
+      console.log(`v${v}: ${a} != ${b} ? ${t} : ${f}`)
+      return `v${v}`
     }
-    function compRecursion(i: number) {
-      if (i === comp.deps.length) {
-        let v = comp.get(inputs, cvs)
-        if (v === V) (deepPoss[v] ??= []).push([inputs.slice(), cvs.slice()])
-        else deepPoss[v] ??= undefined
-        return
-      }
-      for (let v in depsPoss[i]) {
-        if (isNaN(+v)) continue
-        cvs[comp.deps[i]] = +v
-        compRecursion(i + 1)
-      }
-    }
-    inputRecursion(0)
-    // console.log(inspect(deepPoss, undefined, Infinity), comp)
-    return (comp.poss = deepPoss)
-  }
-
-  genPoss(comps[variables.z])
-
-  let options: [number[], number[]][] = [[[], []]]
-  options[0][1][variables.z] = 0
-
-  let fin: number[][] = []
-
-  let cur
-  while ((cur = options.pop())) {
+    let a = printNode(node.a, map)
+    let b = printNode(node.b, map)
+    let v = map.size
+    map.set(node, v)
     console.log(
-      cur.length,
-      fin.length,
-      Math.max(...fin.map(x => x.slice().reduce((a, b) => a * 10 + b, 0))),
+      `v${v}: ${a} ${
+        {
+          add: "+",
+          mul: "*",
+          eql: "==",
+          div: "/",
+          mod: "%",
+          neq: "!=",
+          round: "round",
+        }[node.op]
+      } ${b}`,
     )
-    if (cur[1].every(x => false)) {
-      fin.push(cur[0])
-      continue
+    return `v${v}`
+  }
+
+  function compile(node: Node, checked = new Set<Node>()): boolean {
+    while (node.type === "proxy") node = node.inner
+    if (checked.has(node)) return false
+    checked.add(node)
+    function eq(a: Node, b: Node) {
+      return unwrap(a, a => unwrap(b, b => a === b))
     }
-    let y: number
-    for (let z in cur[1]) {
-      if (isNaN(+z)) continue
-      y = +z
+    if (node.type === "neq") {
+      let rangeA = range(node.a)
+      let rangeB = range(node.b)
+      if (rangeA[1] < rangeB[0] || rangeB[1] < rangeA[0]) {
+        setNode(node, node.t)
+        return true
+      }
+      if (
+        rangeA[0] === rangeA[1] &&
+        rangeA[0] === rangeB[0] &&
+        rangeB[0] === rangeB[1]
+      ) {
+        setNode(node, node.f)
+        return true
+      }
+      let a = node.a
+      let b = node.b
+      if (unwrap(node.f, x => x.type === "neq" && eq(a, x.a) && eq(b, x.b))) {
+        setNode(node, {
+          ...node,
+          f: unwrap(node.f, x => (x as any).f),
+        })
+        return true
+      }
+      return !!(
+        +compile(node.a, checked) |
+        +compile(node.b, checked) |
+        +compile(node.t, checked) |
+        +compile(node.f, checked)
+      )
     }
-    let x = y!
-    let a = cur[1][x]
-    delete cur[1][x]
-    // console.log(x)
-    bar: for (let foo of dbg.x(genPoss(comps[x], a)[a]!)) {
-      let newC = cur[0].slice()
-      for (let n in foo[0]) {
-        if (isNaN(+n)) continue
-        if (foo[0][n] === newC[n]) continue
-        if (n in newC) continue bar
-        newC[n] = foo[0][n]
+    if (node.type === "op") {
+      if (isConst(node.a) && isConst(node.b)) {
+        let a = getConst(node.a)
+        let b = getConst(node.b)
+        let v = comp(node.op, a, b)
+        setNode(node, { type: "const", value: v })
       }
-      let newD = cur[1].slice()
-      for (let n in foo[1]) {
-        if (isNaN(+n)) continue
-        if (foo[1][n] === newD[n]) continue
-        if (n in newD) continue bar
-        newD[n] = foo[1][n]
+      if (node.op === "mul" && [node.a, node.b].some(x => isConst(x, 0))) {
+        setNode(node, zero)
+        return true
       }
-      options.push([newC, newD])
+      if (node.op === "add" && isConst(node.a, 0)) {
+        setNode(node, node.b)
+        return true
+      }
+      if (node.op === "add" && isConst(node.b, 0)) {
+        setNode(node, node.a)
+        return true
+      }
+      if (node.op === "mul" && isConst(node.a, 1)) {
+        setNode(node, node.b)
+        return true
+      }
+      if (node.op === "mul" && isConst(node.b, 1)) {
+        setNode(node, node.a)
+        return true
+      }
+      if (node.op === "div" && isConst(node.b, 1)) {
+        setNode(node, node.a)
+        return true
+      }
+      if (
+        node.op === "eql" &&
+        isConst(node.b, 0) &&
+        unwrap(node.a, x => x.type === "op" && x.op === "eql")
+      ) {
+        setNode(node, {
+          type: "neq",
+          a: unwrap(node.a, x => (x.type === "op" ? x.a : null!)),
+          b: unwrap(node.a, x => (x.type === "op" ? x.b : null!)),
+          t: { type: "const", value: 1 },
+          f: zero,
+        })
+        return true
+      }
+      if (
+        node.op === "mul" &&
+        isConst(node.b, 26) &&
+        unwrap(
+          node.a,
+          x => x.type === "op" && x.op === "div" && isConst(x.b, 26),
+        )
+      ) {
+        setNode(node, {
+          type: "op",
+          op: "round",
+          a: unwrap(node.a, x => (x as any).a) as any,
+          b: node.b,
+        })
+        return true
+      }
+      if (+compile(node.a, checked) | +compile(node.b, checked)) {
+        checked.delete(node)
+        return compile(node) || true
+      }
+      if (unwrap(node.b, x => x.type === "neq")) {
+        let x = unwrap(node.b, x => (x.type === "neq" ? x : null!))
+        let n: Node = {
+          ...x,
+          t: {
+            type: "op",
+            op: node.op,
+            a: node.a,
+            b: x.t,
+          },
+          f: {
+            type: "op",
+            op: node.op,
+            a: node.a,
+            b: x.f,
+          },
+        }
+        compile(n)
+        setNode(node, n)
+        return true
+      }
+      if (isConst(node.b) && unwrap(node.a, x => x.type === "neq")) {
+        let x = unwrap(node.a, x => (x.type === "neq" ? x : null!))
+        let n: Node = {
+          ...x,
+          t: {
+            type: "op",
+            op: node.op,
+            a: x.t,
+            b: node.b,
+          },
+          f: {
+            type: "op",
+            op: node.op,
+            a: x.f,
+            b: node.b,
+          },
+        }
+        compile(n)
+        setNode(node, n)
+        return true
+      }
+      // if (node.op === "mul") console.log(printNode(node.b))
+    }
+    return false
+    function unwrap<T>(node: Node, f: (x: Node) => T) {
+      while (node.type === "proxy") node = node.inner
+      return f(node)
+    }
+    function setNode(node: Node, toNode: Node) {
+      Object.assign(node, { type: "proxy", inner: toNode })
+    }
+    function isConst(node: Node, val?: number) {
+      while (node.type === "proxy") node = node.inner
+      return node.type === "const" && (val === undefined || node.value === val)
+    }
+    function getConst(node: Node) {
+      while (node.type === "proxy") node = node.inner
+      if (node.type !== "const") throw new Error("Invalid getConst")
+      return node.value
     }
   }
 
-  let ns = Math.max(...fin.map(x => x.slice().reduce((a, b) => a * 10 + b, 0)))
-  console.log(ns)
+  while (compile(variables.z));
+  function range(node: Node): [number, number] {
+    while (node.type === "proxy") node = node.inner
+    if (node.type === "const") return [node.value, node.value]
+    if (node.type === "input") return [1, 9]
+    if (node.type === "neq") {
+      let vs = [...range(node.t), ...range(node.f)]
+      return [Math.min(...vs), Math.max(...vs)]
+    }
+    if (node.op === "eql") return [0, 1]
+    let a = range(node.a)
+    let b = range(node.b)
+    if (node.op === "mod") {
+      if (a[0] < 0) throw 0
+      return [0, Math.min(a[1], b[1])]
+    }
+    let op = node.op
+    let vs = a.flatMap(x => b.flatMap(y => comp(op, x, y)))
+    return [Math.min(...vs), Math.max(...vs)]
+  }
 
-  return ns
+  function comp(op: Extract<Node, { type: "op" }>["op"], a: number, b: number) {
+    return op === "add"
+      ? a + b
+      : op === "mul"
+      ? a * b
+      : op === "div"
+      ? trunc(a / b)
+      : op === "mod"
+      ? a % b
+      : op === "eql"
+      ? +(a === b)
+      : op === "round"
+      ? trunc(a / b) * b
+      : op
+  }
+
+  console.log(printNode(variables.z))
+  console.log(range(variables.z))
+
+  return 0
 })
 
 function trunc(a: number) {
